@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <title>Jelajah Dhomir Multiplayer</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f8f9fa; }
+    .board { display: flex; flex-wrap: wrap; width: 420px; margin: 20px auto; }
+    .cell {
+      width: 60px; height: 60px; border: 1px solid #aaa;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; background: #fff; position: relative;
+      margin: 2px;
+    }
+    .player-token { font-size: 20px; position: absolute; top: 2px; right: 2px; }
+    .controls { text-align: center; margin-top: 20px; }
+    .btn { padding: 10px 18px; font-size: 18px; background: #2980b9; color: #fff; border: none; cursor: pointer; border-radius: 6px;}
+    .btn:active { background: #1f5c8a; }
+    .dice { font-size: 32px; margin: 12px 0; }
+    .question { font-size: 18px; margin: 20px 0; background: #e9f7ef; padding: 10px; border-radius: 6px;}
+    .leaderboard { margin: 20px auto; width: 420px; background: #fff; border: 1px solid #aaa; border-radius: 6px; padding: 12px;}
+    .leaderboard h4 { margin: 0 0 10px 0; }
+    .leaderboard-table { width: 100%; border-collapse: collapse;}
+    .leaderboard-table td, .leaderboard-table th { border: 1px solid #ccc; padding: 4px 8px; text-align: center;}
+    .start-section { text-align: center; margin-top: 40px;}
+    .input-player { width: 120px; padding: 6px; margin: 4px;}
+    .curr-player { font-weight: bold; color: #16a085; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center;">Permainan Jelajah Dhomir (Multiplayer)</h2>
+  <div id="start-section" class="start-section">
+    <p>Masukkan nama pemain (2-4 orang):</p>
+    <input class="input-player" id="player1" placeholder="Pemain 1">
+    <input class="input-player" id="player2" placeholder="Pemain 2">
+    <input class="input-player" id="player3" placeholder="Pemain 3">
+    <input class="input-player" id="player4" placeholder="Pemain 4">
+    <br>
+    <button class="btn" onclick="startGame()">Mula Permainan</button>
+  </div>
+  <div id="game-section" style="display:none;">
+    <div class="board" id="board"></div>
+    <div class="controls">
+      <div class="dice" id="dice">🎲</div>
+      <div id="current-player"></div>
+      <button class="btn" id="rollBtn" onclick="rollDice()">Guling Dadu</button>
+      <div class="question" id="question"></div>
+      <div id="answer-section" style="margin: 12px 0;">
+        <input type="text" id="answerInput" placeholder="Tulis ayat di sini..." style="width: 320px; padding: 8px;">
+        <button class="btn" onclick="submitAnswer()">Hantar Jawapan</button>
+      </div>
+    </div>
+    <div class="leaderboard" id="leaderboard"></div>
+  </div>
+  <script>
+    const dhomirList = [
+      { arab: "أنا", maksud: "Saya", contoh: "أنا أذهب إلى sekolah." },
+      { arab: "أنتَ", maksud: "Kamu (lelaki)", contoh: "أنتَ bermain bola." },
+      { arab: "أنتِ", maksud: "Kamu (perempuan)", contoh: "أنتِ menulis." },
+      { arab: "هو", maksud: "Dia (lelaki)", contoh: "هو membaca buku." },
+      { arab: "هي", maksud: "Dia (perempuan)", contoh: "هي memasak makanan." },
+      { arab: "نحن", maksud: "Kami/Kita", contoh: "نحن pergi ke masjid." },
+      { arab: "أنتم", maksud: "Kamu semua (lelaki)", contoh: "أنتم belajar." },
+      { arab: "أنتن", maksud: "Kamu semua (perempuan)", contoh: "أنتن menulis." },
+      { arab: "هم", maksud: "Mereka (lelaki)", contoh: "هم bermain." },
+      { arab: "هن", maksud: "Mereka (perempuan)", contoh: "هن memasak." }
+    ];
+    let players = [];
+    let playerPositions = [];
+    let playerScores = [];
+    let currentPlayerIdx = 0;
+
+    function startGame() {
+      players = [];
+      for(let i=1; i<=4; i++) {
+        let name = document.getElementById('player'+i).value.trim();
+        if(name) players.push(name);
+      }
+      if(players.length < 2) {
+        alert('Sila masukkan sekurang-kurangnya dua nama pemain!');
+        return;
+      }
+      playerPositions = Array(players.length).fill(0);
+      playerScores = Array(players.length).fill(0);
+      currentPlayerIdx = 0;
+      document.getElementById('start-section').style.display = 'none';
+      document.getElementById('game-section').style.display = 'block';
+      renderBoard();
+      updateLeaderboard();
+      showCurrentPlayer();
+      askQuestion();
+      document.getElementById('dice').textContent = '🎲';
+      document.getElementById('answerInput').value = '';
+      document.getElementById('rollBtn').disabled = false;
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      dhomirList.forEach((dhomir, cellIdx) => {
+        let tokens = '';
+        players.forEach((p, idx) => {
+          if(playerPositions[idx] === cellIdx) tokens += `<span class="player-token" style="color:${tokenColor(idx)}">${tokenIcon(idx)}</span>`;
+        });
+        board.innerHTML += `<div class="cell">${dhomir.arab} ${tokens}</div>`;
+      });
+    }
+
+    function tokenColor(idx) {
+      const colors = ["#27ae60", "#c0392b", "#2980b9", "#f39c12"];
+      return colors[idx % colors.length];
+    }
+    function tokenIcon(idx) {
+      const icons = ["🧒", "🧑", "👦", "👧"];
+      return icons[idx % icons.length];
+    }
+
+    function rollDice() {
+      const diceVal = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('dice').textContent = `🎲 ${diceVal}`;
+      movePlayer(diceVal);
+    }
+
+    function movePlayer(steps) {
+      let pos = playerPositions[currentPlayerIdx] + steps;
+      if(pos >= dhomirList.length) pos = dhomirList.length - 1;
+      playerPositions[currentPlayerIdx] = pos;
+      renderBoard();
+      askQuestion();
+      document.getElementById('answerInput').value = '';
+      document.getElementById('rollBtn').disabled = true;
+    }
+
+    function askQuestion() {
+      let pos = playerPositions[currentPlayerIdx];
+      if(pos < dhomirList.length) {
+        const dhomir = dhomirList[pos];
+        document.getElementById('question').innerHTML =
+          `<b>Dhomir:</b> ${dhomir.arab}<br>
+           <b>Maksud:</b> ${dhomir.maksud}<br>
+           <b>Contoh:</b> ${dhomir.contoh}<br>
+           <i>${players[currentPlayerIdx]}, bina satu ayat menggunakan dhomir ini!</i>`;
+      } else {
+        document.getElementById('question').innerHTML = `Tahniah ${players[currentPlayerIdx]}! Sudah sampai ke penghujung papan!`;
+        document.getElementById('answer-section').style.display = 'none';
+      }
+    }
+
+    function submitAnswer() {
+      let pos = playerPositions[currentPlayerIdx];
+      if(pos >= dhomirList.length) return;
+      const dhomir = dhomirList[pos];
+      const answer = document.getElementById('answerInput').value.trim();
+      let score = 0;
+      // Semak ayat: mesti ada dhomir Arab pada ayat
+      if(answer.includes(dhomir.arab)) {
+        score = 2;
+        document.getElementById('question').innerHTML += '<br><span style="color:green;">Jawapan betul! (+2 markah)</span>';
+      } else {
+        score = 0;
+        document.getElementById('question').innerHTML += '<br><span style="color:red;">Jawapan kurang tepat. (0 markah)</span>';
+      }
+      playerScores[currentPlayerIdx] += score;
+      updateLeaderboard();
+      setTimeout(nextPlayer, 1500);
+    }
+
+    function nextPlayer() {
+      // Jika semua pemain sudah sampai penghujung papan
+      let finished = playerPositions.every(pos => pos >= dhomirList.length - 1);
+      if(finished) {
+        showWinner();
+        return;
+      }
+      do {
+        currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
+      } while(playerPositions[currentPlayerIdx] >= dhomirList.length - 1);
+      showCurrentPlayer();
+      askQuestion();
+      document.getElementById('answerInput').value = '';
+      document.getElementById('rollBtn').disabled = false;
+      document.getElementById('answer-section').style.display = 'block';
+    }
+
+    function showCurrentPlayer() {
+      document.getElementById('current-player').innerHTML = 
+        `Giliran: <span class="curr-player">${players[currentPlayerIdx]}</span>`;
+    }
+
+    function updateLeaderboard() {
+      let html = '<h4>Leaderboard</h4><table class="leaderboard-table"><tr><th>Pemain</th><th>Markah</th><th>Kedudukan</th></tr>';
+      let scoresWithIdx = playerScores.map((score, idx) => ({score, idx}));
+      scoresWithIdx.sort((a, b) => b.score - a.score);
+      scoresWithIdx.forEach((item, rank) => {
+        html += `<tr>
+          <td style="color:${tokenColor(item.idx)}">${players[item.idx]}</td>
+          <td>${playerScores[item.idx]}</td>
+          <td>${rank+1}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      document.getElementById('leaderboard').innerHTML = html;
+    }
+
+    function showWinner() {
+      let maxScore = Math.max(...playerScores);
+      let winners = players.filter((p, idx) => playerScores[idx] === maxScore);
+      document.getElementById('question').innerHTML = 
+        `<b>Tahniah!</b> Permainan tamat.<br>Pemenang: <span style="color:#16a085">${winners.join(', ')}</span> dengan markah ${maxScore}.`;
+      document.getElementById('answer-section').style.display = 'none';
+      document.getElementById('rollBtn').disabled = true;
+    }
+  </script>
+</body>
+</html>
