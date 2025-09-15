@@ -137,6 +137,7 @@
       askQuestion();
       document.getElementById('answerInput').value = '';
       document.getElementById('rollBtn').disabled = true;
+      renderArabicKeyboard();
     }
 
     function askQuestion() {
@@ -188,6 +189,7 @@
       document.getElementById('answerInput').value = '';
       document.getElementById('rollBtn').disabled = false;
       document.getElementById('answer-section').style.display = 'block';
+      renderArabicKeyboard(); // Pastikan papan kekunci sentiasa dipaparkan!
     }
 
     function showCurrentPlayer() {
@@ -220,7 +222,6 @@
     }
 
     // --- Virtual Arabic Keyboard ---
-    // Susunan huruf arabic standard
     const arabicKeys = [
       ["ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج", "د"],
       ["ش", "س", "ي", "ب", "ل", "ا", "ت", "ن", "م", "ك", "ط"],
@@ -236,14 +237,12 @@
         rowDiv.className = 'keyboard-row';
         row.forEach(key => {
           if(key === " ") {
-            // Space key
             const keyBtn = document.createElement('button');
             keyBtn.className = 'key-func';
             keyBtn.textContent = 'Space';
             keyBtn.onclick = () => insertArabicChar(' ');
             rowDiv.appendChild(keyBtn);
           } else if(key === "؟") {
-            // Question mark
             const keyBtn = document.createElement('button');
             keyBtn.className = 'arabic-key';
             keyBtn.textContent = key;
@@ -290,7 +289,6 @@
         input.focus();
         input.selectionStart = input.selectionEnd = start-1;
       } else {
-        // If some text is selected
         input.value = input.value.substring(0, start) + input.value.substring(end);
         input.focus();
         input.selectionStart = input.selectionEnd = start;
