@@ -25,6 +25,12 @@
     .start-section { text-align: center; margin-top: 40px;}
     .input-player { width: 120px; padding: 6px; margin: 4px;}
     .curr-player { font-weight: bold; color: #16a085; }
+    .arabic-keyboard { margin: 10px auto 0 auto; width: 350px; display: flex; flex-wrap: wrap; justify-content: center;}
+    .arabic-key { width: 32px; height: 32px; margin: 2px; font-size: 22px; text-align: center; background: #f1c40f; border: none; border-radius: 5px; cursor: pointer;}
+    .arabic-key:active { background: #f39c12; }
+    .keyboard-row { width: 100%; display: flex; justify-content: center; }
+    .key-func { width: 60px; height: 32px; margin: 2px; font-size: 16px; background: #b2bec3; color: #222; border: none; border-radius: 5px; cursor: pointer;}
+    .key-func:active { background: #636e72; }
   </style>
 </head>
 <body>
@@ -46,15 +52,16 @@
       <button class="btn" id="rollBtn" onclick="rollDice()">Guling Dadu</button>
       <div class="question" id="question"></div>
       <div id="answer-section" style="margin: 12px 0;">
-        <input type="text" id="answerInput" placeholder="Tulis ayat di sini..." style="width: 320px; padding: 8px;">
+        <input type="text" id="answerInput" placeholder="Tulis ayat di sini..." style="width: 320px; padding: 8px;" autocomplete="off">
         <button class="btn" onclick="submitAnswer()">Hantar Jawapan</button>
+        <div class="arabic-keyboard" id="arabic-keyboard"></div>
       </div>
     </div>
     <div class="leaderboard" id="leaderboard"></div>
   </div>
   <script>
     const dhomirList = [
-      { arab: "أنا", maksud: "Saya", contoh: "أنا أذهب إلى sekolah." },
+      { arab: "أنا", maksud: "Saya", contoh: "أنا pergi ke sekolah." },
       { arab: "أنتَ", maksud: "Kamu (lelaki)", contoh: "أنتَ bermain bola." },
       { arab: "أنتِ", maksud: "Kamu (perempuan)", contoh: "أنتِ menulis." },
       { arab: "هو", maksud: "Dia (lelaki)", contoh: "هو membaca buku." },
@@ -92,6 +99,7 @@
       document.getElementById('dice').textContent = '🎲';
       document.getElementById('answerInput').value = '';
       document.getElementById('rollBtn').disabled = false;
+      renderArabicKeyboard();
     }
 
     function renderBoard() {
@@ -209,6 +217,84 @@
         `<b>Tahniah!</b> Permainan tamat.<br>Pemenang: <span style="color:#16a085">${winners.join(', ')}</span> dengan markah ${maxScore}.`;
       document.getElementById('answer-section').style.display = 'none';
       document.getElementById('rollBtn').disabled = true;
+    }
+
+    // --- Virtual Arabic Keyboard ---
+    // Susunan huruf arabic standard
+    const arabicKeys = [
+      ["ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج", "د"],
+      ["ش", "س", "ي", "ب", "ل", "ا", "ت", "ن", "م", "ك", "ط"],
+      ["ئ", "ء", "ؤ", "ر", "لا", "ى", "ة", "و", "ز", "ظ"],
+      ["ذ", "أ", "إ", "آ", " ", "؟"]
+    ];
+
+    function renderArabicKeyboard() {
+      const keyboard = document.getElementById('arabic-keyboard');
+      keyboard.innerHTML = '';
+      arabicKeys.forEach(row => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'keyboard-row';
+        row.forEach(key => {
+          if(key === " ") {
+            // Space key
+            const keyBtn = document.createElement('button');
+            keyBtn.className = 'key-func';
+            keyBtn.textContent = 'Space';
+            keyBtn.onclick = () => insertArabicChar(' ');
+            rowDiv.appendChild(keyBtn);
+          } else if(key === "؟") {
+            // Question mark
+            const keyBtn = document.createElement('button');
+            keyBtn.className = 'arabic-key';
+            keyBtn.textContent = key;
+            keyBtn.onclick = () => insertArabicChar(key);
+            rowDiv.appendChild(keyBtn);
+          } else {
+            const keyBtn = document.createElement('button');
+            keyBtn.className = 'arabic-key';
+            keyBtn.textContent = key;
+            keyBtn.onclick = () => insertArabicChar(key);
+            rowDiv.appendChild(keyBtn);
+          }
+        });
+        keyboard.appendChild(rowDiv);
+      });
+      // Tambah butang padam
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'keyboard-row';
+      const backspaceBtn = document.createElement('button');
+      backspaceBtn.className = 'key-func';
+      backspaceBtn.textContent = 'Padam';
+      backspaceBtn.onclick = () => backspaceArabicChar();
+      rowDiv.appendChild(backspaceBtn);
+      keyboard.appendChild(rowDiv);
+    }
+
+    function insertArabicChar(char) {
+      const input = document.getElementById('answerInput');
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const before = input.value.substring(0, start);
+      const after = input.value.substring(end);
+      input.value = before + char + after;
+      input.focus();
+      input.selectionStart = input.selectionEnd = start + char.length;
+    }
+    function backspaceArabicChar() {
+      const input = document.getElementById('answerInput');
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      if(start === 0 && end === 0) return;
+      if(start === end) {
+        input.value = input.value.substring(0, start-1) + input.value.substring(end);
+        input.focus();
+        input.selectionStart = input.selectionEnd = start-1;
+      } else {
+        // If some text is selected
+        input.value = input.value.substring(0, start) + input.value.substring(end);
+        input.focus();
+        input.selectionStart = input.selectionEnd = start;
+      }
     }
   </script>
 </body>
